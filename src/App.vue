@@ -1,72 +1,96 @@
 <template>
   <v-app>
-    <!-- App Bar with Blur & Dynamic Elevation -->
-    <v-app-bar color="surface" elevation="2" class="px-3">
+    <!-- Top Navigation Bar -->
+    <v-app-bar color="surface" elevation="1" class="px-md-4">
       <!-- Brand Logo / Title -->
-      <v-app-bar-title class="font-weight-bold text-h6 text-primary">
-        <v-icon icon="mdi-bag-personal-outline" class="mr-2" />
-        VELOCE COMMERCE
+      <v-app-bar-title class="font-weight-black text-h6 text-primary cursor-pointer" @click="$router.push('/')">
+        <v-icon icon="mdi-lightning-bolt" color="amber-accent-3" class="mr-1" />
+        VELOCE
       </v-app-bar-title>
+
+      <!-- Global Search Bar -->
+      <v-responsive max-width="400" class="mx-4 d-none d-sm-flex">
+        <v-text-field
+          v-model="searchQuery"
+          density="compact"
+          variant="solo-filled"
+          placeholder="Search products, brands, categories..."
+          prepend-inner-icon="mdi-magnify"
+          clearable
+          hide-details
+          flat
+          rounded="lg"
+          @update:model-value="onSearch"
+        ></v-text-field>
+      </v-responsive>
 
       <v-spacer></v-spacer>
 
-      <!-- Navigation Links -->
-      <div class="d-none d-md-flex align-center ga-2">
-        <v-btn to="/" variant="text" prepend-icon="mdi-home">Home</v-btn>
-        <v-btn to="/about" variant="text" prepend-icon="mdi-information">About</v-btn>
-        <v-btn to="/unstop" variant="text" prepend-icon="mdi-rocket-launch">Unstop</v-btn>
+      <!-- Navigation Actions -->
+      <div class="d-flex align-center ga-1">
+        <v-btn to="/" variant="text" prepend-icon="mdi-storefront-outline">Shop</v-btn>
+
+        <!-- Cart Button -->
+        <v-btn to="/cartpage" variant="tonal" color="primary" class="ml-1">
+          <v-badge :content="cartTotal" color="error" floating :model-value="cartTotal > 0">
+            <v-icon icon="mdi-cart-outline" />
+          </v-badge>
+          <span class="ml-2 d-none d-sm-inline">Cart</span>
+        </v-btn>
+
+        <!-- Theme Toggle -->
+        <v-btn
+          icon
+          variant="text"
+          @click="toggleTheme"
+          :title="`Switch to ${isDark ? 'Light' : 'Dark'} Mode`"
+        >
+          <v-icon :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'" />
+        </v-btn>
       </div>
-
-      <v-divider vertical class="mx-3 my-3 d-none d-md-flex"></v-divider>
-
-      <!-- Cart Button with Live Counter Badge -->
-      <v-btn to="/cartpage" variant="tonal" color="primary" class="mr-2">
-        <v-badge :content="cartTotal" color="error" floating>
-          <v-icon icon="mdi-cart" />
-        </v-badge>
-        <span class="ml-3 d-none d-sm-inline">Cart</span>
-      </v-btn>
-
-      <!-- Theme Toggle Button -->
-      <v-btn 
-        icon 
-        variant="text" 
-        @click="toggleTheme" 
-        :title="`Switch to ${isDark ? 'Light' : 'Dark'} Mode`"
-      >
-        <v-icon :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'" />
-      </v-btn>
     </v-app-bar>
 
-    <!-- Main Content Container -->
+    <!-- Main App Content -->
     <v-main class="bg-background">
-      <v-container fluid class="pa-6">
-        <router-view />
-      </v-container>
+      <router-view />
     </v-main>
 
-    <!-- Professional Footer -->
-    <v-footer class="text-center d-flex flex-column bg-surface pa-4 mt-auto">
-      <div class="text-caption text-medium-emphasis">
-        © {{ new Date().getFullYear() }} — <strong>Veloce Commerce</strong> | Portfolio Showcase
-      </div>
+    <!-- Production Footer -->
+    <v-footer class="bg-surface border-t py-8 mt-12">
+      <v-container>
+        <v-row class="text-caption text-medium-emphasis">
+          <v-col cols="12" md="6" class="text-center text-md-left">
+            <div class="text-subtitle-2 font-weight-bold text-high-emphasis mb-1">
+              VELOCE COMMERCE
+            </div>
+            High-Performance Vue 3 E-Commerce Storefront
+          </v-col>
+          <v-col cols="12" md="6" class="text-center text-md-right">
+            © {{ new Date().getFullYear() }} Veloce Commerce. All rights reserved.
+          </v-col>
+        </v-row>
+      </v-container>
     </v-footer>
   </v-app>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useStore } from 'vuex'
 import { useTheme } from 'vuetify'
 
 const store = useStore()
 const theme = useTheme()
+const searchQuery = ref('')
 
-const cartTotal = computed(() => store.getters.cartTotal)
+const cartTotal = computed(() => store.getters.cartTotal || 0)
 const isDark = computed(() => theme.global.current.value.dark)
 
 const toggleTheme = () => {
   theme.global.name.value = isDark.value ? 'light' : 'dark'
 }
-</script>
 
+const onSearch = (val) => {
+  store.commit('SET_SEARCH_QUERY', val || '')
+}
+</script>
