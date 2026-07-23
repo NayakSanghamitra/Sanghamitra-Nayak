@@ -1,186 +1,125 @@
 <template>
-  <main>
-    <div class="filters">
-      <input
-        type="text"
-        v-model="searchQuery"
-        placeholder="Search by title"
-        class="filter-input"
-      />
-      <select v-model="categoryFilter" class="filter-select">
-        <option value="">All categories</option>
-        <option
-          v-for="category in uniqueCategories"
-          :value="category"
-          :key="category"
-        >
-          {{ category }}
-        </option>
-      </select>
-      <input
-        type="number"
-        v-model="priceFilter"
-        placeholder="Filter by price"
-        class="filter-input"
-      />
-      <input
-        type="number"
-        v-model="ratingFilter"
-        placeholder="Filter by rating"
-        class="filter-input"
-      />
-    </div>
+  <div>
+    <!-- Hero / Header Banner -->
+    <v-sheet rounded="lg" color="surface-variant" class="pa-8 mb-8 text-center border">
+      <h1 class="text-h3 font-weight-bold mb-2">Explore Next-Gen Gear</h1>
+      <p class="text-subtitle-1 text-medium-emphasis mb-4">
+        Curated high-performance electronics, apparel, and lifestyle products.
+      </p>
+      <v-chip color="primary" variant="outlined" prepend-icon="mdi-check-decagram">
+        FakeStoreAPI Integrated
+      </v-chip>
+    </v-sheet>
 
-    <article class="products mt-6">
-      <template v-if="filteredProducts.length > 0">
-        <section
-          class="card-body products__item"
-          v-for="product in filteredProducts"
-          :key="product.id"
+    <!-- Loading Skeleton -->
+    <v-row v-if="loading">
+      <v-col v-for="n in 8" :key="n" cols="12" sm="6" md="4" lg="3">
+        <v-skeleton-loader type="card, article" />
+      </v-col>
+    </v-row>
+
+    <!-- Product Grid -->
+    <v-row v-else>
+      <v-col
+        v-for="product in products"
+        :key="product.id"
+        cols="12"
+        sm="6"
+        md="4"
+        lg="3"
+      >
+        <v-card
+          elevation="2"
+          hover
+          class="d-flex flex-column fill-height rounded-lg border"
         >
-          <!-- Product item content -->
-          <RouterLink :to="`/products/${product.id}`">
-            <!-- <div class="fade">
-            {{product.title}}
-          </div> -->
-            <img
-              class="products__thumbnail"
-              :src="product.image"
-              :alt="product.title"
-            />
-            <span class="text_title">{{ product.title }}</span>
-          </RouterLink>
-        </section>
-      </template>
-      <span v-else class="text-center">No Product Available</span>
-    </article>
-  </main>
+          <!-- Product Image -->
+          <v-img
+            :src="product.image"
+            height="220"
+            cover
+            class="bg-white pa-4"
+          >
+            <template #placeholder>
+              <div class="d-flex align-center justify-center fill-height">
+                <v-progress-circular indeterminate color="primary" />
+              </div>
+            </template>
+          </v-img>
+
+          <v-card-item class="pt-4">
+            <v-chip size="x-small" color="secondary" class="mb-2 text-uppercase">
+              {{ product.category }}
+            </v-chip>
+            <v-card-title class="text-subtitle-1 font-weight-bold text-truncate">
+              {{ product.title }}
+            </v-card-title>
+          </v-card-item>
+
+          <v-card-text class="flex-grow-1">
+            <div class="d-flex align-center mb-2">
+              <v-rating
+                :model-value="product.rating?.rate || 4"
+                color="amber"
+                density="compact"
+                half-increments
+                readonly
+                size="small"
+              />
+              <span class="text-caption text-medium-emphasis ml-2">
+                ({{ product.rating?.count || 0 }})
+              </span>
+            </div>
+            <div class="text-h6 font-weight-bold text-primary">
+              ${{ product.price }}
+            </div>
+          </v-card-text>
+
+          <v-divider></v-divider>
+
+          <v-card-actions class="pa-3">
+            <v-btn
+              :to="`/products/${product.id}`"
+              variant="text"
+              color="secondary"
+              size="small"
+            >
+              Details
+            </v-btn>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="primary"
+              variant="flat"
+              prepend-icon="mdi-cart-plus"
+              size="small"
+              @click="addToCart(product)"
+            >
+              Add To Cart
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+  </div>
 </template>
 
-<script>
-import { useStore } from "vuex";
-import { computed, ref } from "vue";
+<script setup>
+import { computed, ref, onMounted } from 'vue'
+import { useStore } from 'vuex'
 
-export default {
-  name: "AppUserList",
-  components: {},
-  setup() {
-    const store = useStore();
-    const products = computed(() => store.state.products);
+const store = useStore()
+const loading = ref(true)
 
-    const searchQuery = ref("");
-    const categoryFilter = ref("");
-    const priceFilter = ref("");
-    const ratingFilter = ref("");
+const products = computed(() => store.state.products)
 
-    const filteredProducts = computed(() => {
-      return products.value.filter((product) => {
-        // Apply search filter
-        if (searchQuery.value && !product.title.includes(searchQuery.value)) {
-          return false;
-        }
-        // Apply category filter
-        if (categoryFilter.value && product.category !== categoryFilter.value) {
-          return false;
-        }
-        // Apply price filter
-        if (priceFilter.value && product.price !== Number(priceFilter.value)) {
-          return false;
-        }
-        // Apply rating filter
-        if (
-          ratingFilter.value &&
-          product.rating.rate !== Number(ratingFilter.value)
-        ) {
-          return false;
-        }
-        return true;
-      });
-    });
+onMounted(async () => {
+  if (products.value.length === 0) {
+    await store.dispatch('setProducts')
+  }
+  loading.value = false
+})
 
-    const uniqueCategories = computed(() => {
-      const categories = new Set();
-      products.value.forEach((product) => categories.add(product.category));
-      return Array.from(categories);
-    });
-
-    return {
-      products,
-      searchQuery,
-      categoryFilter,
-      priceFilter,
-      ratingFilter,
-      filteredProducts,
-      uniqueCategories,
-    };
-  },
-};
+const addToCart = (product) => {
+  store.dispatch('addToCart', product)
+}
 </script>
-
-<style scoped>
-.products {
-  display: grid;
-  grid-gap: 8rem;
-  grid:
-    repeat(auto-fill, minmax(10rem, 1fr))
-    / repeat(auto-fill, minmax(10rem, 1fr));
-  grid-auto-rows: minmax(10rem, 1fr);
-}
-
-.products__thumbnail {
-  width: 100%;
-  display: block;
-  height: auto;
-}
-
-.products__item {
-  position: relative;
-  cursor: pointer;
-}
-
-.fade {
-  position: absolute;
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s ease-in-out;
-}
-
-.products__item:hover .fade {
-  opacity: 1;
-  visibility: visible;
-}
-.filters {
-  display: flex;
-  padding-top: 7.5rem;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  border-radius: 10px;
-}
-
-.no-products {
-  margin-top: 1rem;
-  text-align: center;
-}
-
-.filter-input {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.filter-select {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 16px;
-  background-color: #fff;
-}
-</style>
