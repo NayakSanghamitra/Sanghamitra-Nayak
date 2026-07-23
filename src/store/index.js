@@ -1,70 +1,77 @@
-import { createStore, createLogger } from "vuex";
-const store = createStore({
-  plugins: [createLogger()],
+import { createStore } from 'vuex'
+
+export default createStore({
   state: {
-    users: [],
     products: [],
-    cartItems: [],
+    cart: [],
+    loading: false,
+    searchQuery: ''
+  },
+  getters: {
+    // Total number of unique items or cumulative quantity in cart
+    cartTotal(state) {
+      return state.cart.reduce((total, item) => total + item.quantity, 0)
+    }
   },
   mutations: {
-    setUsers(state, users) {
-      state.users = users;
+    SET_PRODUCTS(state, products) {
+      state.products = products
     },
-    setProducts(state, products) {
-      state.products = products;
-      // not sure how to proceed here
+    SET_LOADING(state, status) {
+      state.loading = status
     },
-    addToCart(state, product) {
-      state.cartItems.push(product);
+    SET_SEARCH_QUERY(state, query) {
+      state.searchQuery = query
     },
-    removeFromCart(state, productId) {
-      state.cartItems = state.cartItems.filter((item) => item.id !== productId);
-    },
-  },
-  actions: {
-    async setUsers({ commit }) {
-      const users = window.localStorage.getItem("users");
-      if (users) {
-        commit("setUsers", JSON.parse(users));
+    ADD_TO_CART(state, product) {
+      const existingItem = state.cart.find(item => item.id === product.id)
+      if (existingItem) {
+        existingItem.quantity += 1
       } else {
-        await fetch("https://fakestoreapi.com/products")
-          .then((data) => data.json())
-          .then((data) => {
-            commit("setUsers", data.results);
-            window.localStorage.setItem("users", JSON.stringify(data.results));
-          });
+        state.cart.push({ ...product, quantity: 1 })
       }
     },
-
-    async setProducts({ commit }) {
-      const products = window.localStorage.getItem("products");
-      if (products) {
-        commit("setProducts", JSON.parse(products));
-      } else {
-        await fetch("https://fakestoreapi.com/products")
-          .then((data) => data.json())
-          .then((data) => {
-            commit("setProducts", data);
-            window.localStorage.setItem("products", JSON.stringify(data));
-          });
+    DECREASE_CART_ITEM(state, productId) {
+      const existingItem = state.cart.find(item => item.id === productId)
+      if (existingItem) {
+        if (existingItem.quantity > 1) {
+          existingItem.quantity -= 1
+        } else {
+          state.cart = state.cart.filter(item => item.id !== productId)
+        }
+      }
+    },
+    REMOVE_FROM_CART(state, productId) {
+      state.cart = state.cart.filter(item => item.id !== productId)
+    },
+    CLEAR_CART(state) {
+      state.cart = []
+    }
+  },
+  actions: {
+    async fetchProducts({ commit }) {
+      commit('SET_LOADING', true)
+      try {
+        const res = await fetch('https://fakestoreapi.com/products')
+        const data = await res.json()
+        commit('SET_PRODUCTS', data)
+      } catch (err) {
+        console.error('Failed to fetch products:', err)
+      } finally {
+        commit('SET_LOADING', false)
       }
     },
     addToCart({ commit }, product) {
-      const productCopy = { ...product }; // Make a copy of the product
-      commit("addToCart", productCopy);
+      commit('ADD_TO_CART', product)
+    },
+    decreaseCartItem({ commit }, productId) {
+      commit('DECREASE_CART_ITEM', productId)
     },
     removeFromCart({ commit }, productId) {
-      commit("removeFromCart", productId);
+      commit('REMOVE_FROM_CART', productId)
     },
-  },
-
-  getters: {
-    cartItems: (state) => state.cartItems,
-    cartTotal: (state) => state.cartItems.length,
-  },
-  modules: {},
-  strict: process.env.NODE_ENV !== "production",
-});
-export default store;
-(async () => await store.dispatch("setUsers"))();
-(async () => await store.dispatch("setProducts"))();
+    clearCart({ commit }) {
+      commit('CLEAR_CART')
+    }
+  }
+})
